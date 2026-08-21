@@ -22,7 +22,7 @@ it after the widget already came up without it.
 ## Install
 
 ```
-omarchy plugin add https://github.com/devbrsa/omarchy-crypto-ticker.git --enable
+omarchy plugin add https://github.com/devbrsa/omarchy-crypto-marquee.git --enable
 omarchy pkg add websocat
 ```
 
