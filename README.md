@@ -6,7 +6,7 @@ on the way down per symbol, and opens a configuration popup on click.
 
 ![Preview](preview.png)
 
-<video src="sample.mp4" controls width="400"></video>
+![Demo](sample.gif)
 
 ## Dependency
 
