@@ -4,6 +4,10 @@ A bar widget that scrolls multiple crypto prices and their daily %
 change, marquee-style, with a triangle that's green on the way up and red
 on the way down per symbol, and opens a configuration popup on click.
 
+![Preview](preview.png)
+
+<video src="sample.mp4" controls width="400"></video>
+
 ## Dependency
 
 Live prices come over a Binance WebSocket stream, bridged into Quickshell
