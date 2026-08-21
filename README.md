@@ -1,6 +1,6 @@
 # Crypto marquee bar widget
 
-Goal: a bar widget that scrolls multiple crypto prices and their daily %
+A bar widget that scrolls multiple crypto prices and their daily %
 change, marquee-style, with a triangle that's green on the way up and red
 on the way down per symbol, and opens a configuration popup on click.
 
@@ -111,12 +111,6 @@ git-managed clone (e.g. via `omarchy plugin add`).
    sliders use), separate from the symbol list: each applies and writes
    back to `shell.json` the moment you release it, independent of the
    Save button, which only ever commits the symbol list.
-8. Right-clicking always runs `omarchy-launch-or-focus-webapp "TradingView" <url>`,
-   Omarchy's existing launch-or-focus helper, opening the default
-   TradingView chart page. It isn't tied to whichever symbol happens to
-   be scrolling past, so it focuses the already installed TradingView PWA
-   (`~/.local/share/applications/TradingView.desktop`) instead of opening
-   a new window every click.
 
 ## Configuration
 
