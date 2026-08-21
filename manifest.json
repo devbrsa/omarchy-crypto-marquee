@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.devbrsa.crypto-marquee",
+  "name": "Crypto Marquee",
+  "version": "1.0.0",
+  "author": "devbrsa",
+  "license": "MIT",
+  "description": "Live Binance price marquee over WebSocket (requires the 'websocat' package) with a trend triangle; click opens TradingView.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "Widget.qml" },
+  "barWidget": {
+    "displayName": "Crypto Marquee",
+    "description": "Live Binance price + % change over WebSocket, click to open TradingView",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}
