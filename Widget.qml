@@ -149,6 +149,11 @@ BarWidget {
   }
 
   function applyWsMessage(line) {
+    // A real combined-stream trade message is a couple hundred bytes.
+    // websocat/SplitParser has no built-in max-line-size to bound this
+    // upstream, so reject anything implausibly large before it ever
+    // reaches JSON.parse — defense against a compromised/spoofed endpoint.
+    if (line.length > 8192) return
     var msg
     try { msg = JSON.parse(line) } catch (e) { return }
     var data = msg && msg.data
@@ -200,6 +205,10 @@ BarWidget {
   // itself comes from the WS trade stream, not this REST call.
   function applyDayOpenResponse(raw) {
     var sym = symbols[fetchIndex]
+    // Defense in depth alongside curl's own --max-filesize: never hand an
+    // implausibly large response to JSON.parse, regardless of why it got
+    // this far (a real single-candle response is a few hundred bytes).
+    if (raw.length > 16384) { fetchNextDayOpen(); return }
     var data
     try { data = JSON.parse(raw) } catch (e) { fetchNextDayOpen(); return }
     if (!Array.isArray(data) || data.length === 0) { fetchNextDayOpen(); return }
@@ -215,10 +224,13 @@ BarWidget {
     fetchNextDayOpen()
   }
 
+  // A single-candle kline response is a few hundred bytes; --max-filesize
+  // makes curl abort rather than buffer an oversized response if the
+  // endpoint were ever spoofed or compromised.
   function fetchNextDayOpen() {
     root.fetchIndex++
     if (root.fetchIndex >= root.symbols.length) return
-    dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5",
+    dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5", "--max-filesize", "16384",
       "https://api.binance.com/api/v3/klines?symbol=" + root.symbols[root.fetchIndex] + "&interval=1d&limit=1"]
     dayOpenFetch.running = true
   }
@@ -226,7 +238,7 @@ BarWidget {
   function startDayOpenFetchCycle() {
     if (root.symbols.length === 0) return
     root.fetchIndex = 0
-    dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5",
+    dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5", "--max-filesize", "16384",
       "https://api.binance.com/api/v3/klines?symbol=" + root.symbols[0] + "&interval=1d&limit=1"]
     dayOpenFetch.running = true
   }
@@ -389,6 +401,10 @@ BarWidget {
             // the price/percent segment below carries the up/down color.
             Text {
               text: seg.modelData
+              // Symbol names ultimately originate from Binance's API (the
+              // search popup) or hand-edited shell.json; force plain text
+              // so they're never interpreted as rich/HTML markup.
+              textFormat: Text.PlainText
               color: root.bar ? root.bar.barForeground : Color.foreground
               font.family: root.bar ? root.bar.fontFamily : Style.font.family
               font.pixelSize: Style.font.body
@@ -423,6 +439,10 @@ BarWidget {
             // the price/percent segment below carries the up/down color.
             Text {
               text: seg2.modelData
+              // Symbol names ultimately originate from Binance's API (the
+              // search popup) or hand-edited shell.json; force plain text
+              // so they're never interpreted as rich/HTML markup.
+              textFormat: Text.PlainText
               color: root.bar ? root.bar.barForeground : Color.foreground
               font.family: root.bar ? root.bar.fontFamily : Style.font.family
               font.pixelSize: Style.font.body

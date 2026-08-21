@@ -132,13 +132,21 @@ Panel {
       root.bar.shell.updateEntryInline(root.moduleName, entry)
   }
 
+  // The full ticker/price list is ~150-160KB today; --max-filesize gives
+  // generous headroom while still bounding it, so curl aborts rather than
+  // buffer an oversized response if the endpoint were ever spoofed or
+  // compromised.
   Process {
     id: symbolsProc
-    command: ["curl", "-fsS", "--max-time", "10", "https://api.binance.com/api/v3/ticker/price"]
+    command: ["curl", "-fsS", "--max-time", "10", "--max-filesize", "2097152", "https://api.binance.com/api/v3/ticker/price"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
         root.symbolsLoading = false
+        // Defense in depth alongside curl's own --max-filesize: never hand
+        // an implausibly large response to JSON.parse regardless of why it
+        // got this far.
+        if (text.length > 2097152) { root.symbolsLoadFailed = true; return }
         var data
         try { data = JSON.parse(text) } catch (e) { root.symbolsLoadFailed = true; return }
         if (!Array.isArray(data) || data.length === 0) { root.symbolsLoadFailed = true; return }
@@ -281,6 +289,11 @@ Panel {
                   anchors.leftMargin: Style.space(8)
                   anchors.verticalCenter: parent.verticalCenter
                   text: modelData
+                  // modelData is a Binance-supplied symbol string; force
+                  // plain text so it's never interpreted as rich/HTML
+                  // markup (Text's default AutoText would auto-detect and
+                  // render it as such if it ever looked HTML-ish).
+                  textFormat: Text.PlainText
                   color: index === root.suggestionIndex ? Style.hoverStateColor(root.barForeground, Color.accent) : root.barForeground
                   font.family: root.bar ? root.bar.fontFamily : Style.font.family
                   font.pixelSize: Style.font.body
@@ -325,6 +338,10 @@ Panel {
                   anchors.verticalCenter: parent.verticalCenter
                   width: parent.width - removeButton.width - Style.space(8)
                   text: modelData
+                  // Same reasoning as suggestionLabel above: this symbol
+                  // string is Binance-supplied (or hand-edited shell.json),
+                  // never trust it to AutoText's rich-text detection.
+                  textFormat: Text.PlainText
                   color: root.barForeground
                   font.family: root.bar ? root.bar.fontFamily : Style.font.family
                   font.pixelSize: Style.font.body
