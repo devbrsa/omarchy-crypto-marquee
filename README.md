@@ -2,7 +2,7 @@
 
 Goal: a bar widget that scrolls multiple crypto prices and their daily %
 change, marquee-style, with a triangle that's green on the way up and red
-on the way down per symbol, and opens the TradingView PWA on click.
+on the way down per symbol, and opens a configuration popup on click.
 
 ## Dependency
 
