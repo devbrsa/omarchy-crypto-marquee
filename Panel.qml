@@ -380,6 +380,11 @@ Panel {
           Text {
             visible: root.errorText !== ""
             text: root.errorText
+            // errorText is always a static literal today, never built from
+            // remote/config data — this is defense-in-depth against a
+            // future code change accidentally putting untrusted content
+            // here without anyone thinking to re-check this element.
+            textFormat: Text.PlainText
             color: root.bar ? root.bar.urgent : Color.urgent
             font.family: root.bar ? root.bar.fontFamily : Style.font.family
             font.pixelSize: Style.font.bodySmall
