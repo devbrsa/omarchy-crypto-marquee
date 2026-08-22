@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "Symbols.js" as SymbolUtil
 
 // Binance price ticker marquee. Live last-traded price comes from a
 // websocat-bridged WebSocket connection (combined @trade stream, piped
@@ -24,7 +25,12 @@ BarWidget {
   id: root
   moduleName: "io.github.devbrsa.crypto-marquee"
 
-  readonly property var symbols: root.setting("symbols", ["BTCUSDT", "ETHUSDT"])
+  // Validated/capped by SymbolUtil.sanitize (see Symbols.js): this is a
+  // persisted, hand-editable shell.json value, so every downstream
+  // consumer (tooltip, both marquee Repeaters, the WebSocket URL, the
+  // sequential REST cycle) inherits a sane bound and a guarantee that
+  // every entry is a clean uppercase alphanumeric string.
+  readonly property var symbols: SymbolUtil.sanitize(root.setting("symbols", ["BTCUSDT", "ETHUSDT"]))
   // Only "GMT"/"UTC" is supported today (that's all the user asked for);
   // anything else falls back to the same UTC rendering rather than
   // silently ignoring the setting.

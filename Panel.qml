@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Io
 import qs.Commons
 import qs.Ui
+import "Symbols.js" as SymbolUtil
 
 // Popup opened by clicking the marquee: search Binance's own symbol list
 // (fetched once from GET /api/v3/ticker/price, ~2500 symbols, ~150KB — no
@@ -39,7 +40,11 @@ Panel {
 
   function open() {
     errorText = ""
-    pendingSymbols = (root.setting("symbols", ["BTCUSDT", "ETHUSDT"])).slice()
+    // Same validation Widget.qml applies to root.symbols (see Symbols.js):
+    // this popup's own pending-symbols Repeater renders whatever lands
+    // here before Save is ever clicked, so a huge or malformed persisted
+    // list needs the same bound here too.
+    pendingSymbols = SymbolUtil.sanitize(root.setting("symbols", ["BTCUSDT", "ETHUSDT"]))
     suggestions = []
     suggestionIndex = -1
     scrollSpeedValue = root.setting("scrollSpeedPxPerSec", 90)
@@ -91,6 +96,10 @@ Panel {
 
   function addSymbol(sym) {
     if (!sym || pendingSymbols.indexOf(sym) !== -1) return
+    if (pendingSymbols.length >= SymbolUtil.MAX_SYMBOLS) {
+      errorText = "Limit of " + SymbolUtil.MAX_SYMBOLS + " symbols reached"
+      return
+    }
     pendingSymbols = pendingSymbols.concat([sym])
     errorText = ""
     searchField.text = ""
