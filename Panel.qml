@@ -96,7 +96,11 @@ Panel {
   }
 
   function addSymbol(sym) {
-    if (!sym || pendingSymbols.indexOf(sym) !== -1) return
+    // Defense in depth: allSymbols is already validated by
+    // extractCatalogSymbols(), so this should always hold, but addSymbol
+    // is also reachable straight from onClicked handlers below — never
+    // trust the caller alone to have checked the format.
+    if (!SymbolUtil.isValidSymbol(sym) || pendingSymbols.indexOf(sym) !== -1) return
     if (pendingSymbols.length >= SymbolUtil.MAX_SYMBOLS) {
       errorText = "Limit of " + SymbolUtil.MAX_SYMBOLS + " symbols reached"
       return
@@ -159,8 +163,11 @@ Panel {
         var data
         try { data = JSON.parse(text) } catch (e) { root.symbolsLoadFailed = true; return }
         if (!Array.isArray(data) || data.length === 0) { root.symbolsLoadFailed = true; return }
-        var list = []
-        for (var i = 0; i < data.length; i++) if (data[i] && data[i].symbol) list.push(data[i].symbol)
+        // Validates each entry's symbol field and bounds both how many raw
+        // items are scanned and how many are kept — the response is only
+        // byte-capped above, not item-capped, so an oversized or malformed
+        // ticker record set still needs its own limit here.
+        var list = SymbolUtil.extractCatalogSymbols(data)
         list.sort()
         root.allSymbols = list
         root.symbolsLoadFailed = list.length === 0

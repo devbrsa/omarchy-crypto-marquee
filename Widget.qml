@@ -36,16 +36,14 @@ BarWidget {
   // anything else falls back to the same UTC rendering rather than
   // silently ignoring the setting.
   readonly property string timezone: root.setting("timezone", "GMT")
-  readonly property int viewportWidth: root.setting("viewportWidth", 150)
-  readonly property real scrollSpeedPxPerSec: root.setting("scrollSpeedPxPerSec", 90)
 
-  // These three feed Timer.interval (dayOpenTimer, reconnectTimer below):
-  // an unvalidated 0 or negative value (or a non-numeric one coercing to
-  // NaN, which Timer also treats as an effectively-zero/invalid interval)
-  // schedules near-continuous repeated triggers, driving continuous
-  // curl/websocat process and network churn in this long-lived shell.
-  // clampInt floors/ceils and rejects non-finite values so a malformed
-  // persisted setting can't produce a runaway timer.
+  // Every numeric setting below is a persisted, hand-editable shell.json
+  // value, so none of it can be trusted as-is: clampInt/clampReal reject
+  // non-finite values (falling back to the default) and floor/ceil the
+  // result, so a malformed value can't produce a runaway Timer (interval
+  // 0 driving continuous curl/websocat spawning), a near-zero animation
+  // duration (an extreme scroll speed collapsing the infinite marquee
+  // animation toward a 0ms loop), or a layout-breaking widget width.
   function clampInt(value, fallback, min, max) {
     var n = Number(value)
     if (!isFinite(n)) return fallback
@@ -55,6 +53,16 @@ BarWidget {
     return n
   }
 
+  function clampReal(value, fallback, min, max) {
+    var n = Number(value)
+    if (!isFinite(n)) return fallback
+    if (n < min) return min
+    if (n > max) return max
+    return n
+  }
+
+  readonly property int viewportWidth: root.clampInt(root.setting("viewportWidth", 150), 150, 40, 2000)
+  readonly property real scrollSpeedPxPerSec: root.clampReal(root.setting("scrollSpeedPxPerSec", 90), 90, 1, 2000)
   readonly property int dayOpenRefreshSec: root.clampInt(root.setting("refreshIntervalSec", 5 * 60), 5 * 60, 30, 86400)
   readonly property int reconnectBaseMs: root.clampInt(root.setting("reconnectBaseMs", 2000), 2000, 250, 60000)
   readonly property int reconnectMaxMs: root.clampInt(root.setting("reconnectMaxMs", 60000), 60000, 1000, 300000)
