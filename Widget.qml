@@ -149,10 +149,14 @@ BarWidget {
   }
 
   function applyWsMessage(line) {
-    // A real combined-stream trade message is a couple hundred bytes.
-    // websocat/SplitParser has no built-in max-line-size to bound this
-    // upstream, so reject anything implausibly large before it ever
-    // reaches JSON.parse — defense against a compromised/spoofed endpoint.
+    // Defense in depth alongside websocat's own --max-ws-frame-length /
+    // --max-ws-message-length (set in startWs() below, which reject an
+    // oversized frame at the protocol layer before it ever reaches
+    // SplitParser's line buffer). This check runs after SplitParser has
+    // already buffered a complete line, so it can't by itself stop memory
+    // growth from an oversized or unterminated line — the websocat-level
+    // caps are what actually bound that; this is just a second guard
+    // against implausibly large parsed input.
     if (line.length > 8192) return
     var msg
     try { msg = JSON.parse(line) } catch (e) { return }
@@ -173,7 +177,15 @@ BarWidget {
   function startWs() {
     if (root.websocatMissing || root.symbols.length === 0) return
     root.expectedStop = false
-    wsProc.command = ["websocat", "-t", root.wsUrl()]
+    // A real trade message is a couple hundred bytes; websocat's own
+    // defaults (100MB frames, 200MB messages) are meant for generic use
+    // and would let a compromised/spoofed endpoint grow SplitParser's line
+    // buffer unbounded before our own length check in applyWsMessage()
+    // ever runs. Capping at the WebSocket protocol layer, before the data
+    // reaches our process's stdout at all, is what actually bounds that.
+    wsProc.command = ["websocat", "-t",
+      "--max-ws-frame-length", "8192", "--max-ws-message-length", "8192", "-B", "8192",
+      root.wsUrl()]
     wsProc.running = true
   }
 
