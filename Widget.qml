@@ -108,21 +108,32 @@ BarWidget {
     return (n < 10 ? "0" : "") + n
   }
 
+  // WidgetButton.tooltipText is rendered by the shell's own Bar.qml tooltip
+  // (a Text with no explicit textFormat, so it defaults to Text.AutoText),
+  // which we don't control and can't force to PlainText from here. symbols
+  // and timezone are both user/config-controlled (hand-editable in
+  // shell.json, not just the regex-validated search popup), so strip the
+  // characters Qt's rich-text auto-detection keys on before they ever reach
+  // that shared sink.
+  function sanitizeForTooltip(str) {
+    return String(str).replace(/[<&]/g, "")
+  }
+
   function tooltipFor() {
     if (websocatMissing) return "websocat not installed — run: omarchy pkg add websocat"
-    if (!anyData) return "Fetching " + symbols.join(", ") + "…"
+    if (!anyData) return "Fetching " + symbols.map(sanitizeForTooltip).join(", ") + "…"
     var lines = []
     var latest = null
     for (var i = 0; i < symbols.length; i++) {
       var t = tickers[symbols[i]]
       if (!t || !t.haveData) continue
-      lines.push(symbols[i] + "  " + formatPrice(t.lastPrice) + "  " + formatPercent(t.changePercent))
+      lines.push(sanitizeForTooltip(symbols[i]) + "  " + formatPrice(t.lastPrice) + "  " + formatPercent(t.changePercent))
       if (!latest || t.lastUpdated > latest) latest = t.lastUpdated
     }
     if (latest) {
       var h = pad2(latest.getUTCHours())
       var m = pad2(latest.getUTCMinutes())
-      lines.push("Updated " + h + ":" + m + " " + timezone)
+      lines.push("Updated " + h + ":" + m + " " + sanitizeForTooltip(timezone))
     }
     return lines.join("\n")
   }
@@ -170,7 +181,11 @@ BarWidget {
   }
 
   function wsUrl() {
-    var streams = root.symbols.map(function(s) { return s.toLowerCase() + "@trade" }).join("/")
+    // symbols is user/config-controlled (hand-editable in shell.json, not
+    // just the regex-validated search popup), so encode each segment
+    // individually — otherwise a symbol containing "/" or "@" could inject
+    // extra stream entries into the combined-stream URL.
+    var streams = root.symbols.map(function(s) { return encodeURIComponent(s.toLowerCase()) + "@trade" }).join("/")
     return "wss://stream.binance.com:9443/stream?streams=" + streams
   }
 
@@ -238,12 +253,15 @@ BarWidget {
 
   // A single-candle kline response is a few hundred bytes; --max-filesize
   // makes curl abort rather than buffer an oversized response if the
-  // endpoint were ever spoofed or compromised.
+  // endpoint were ever spoofed or compromised. symbols is user/config-
+  // controlled (hand-editable in shell.json), so it's URL-encoded before
+  // interpolation — otherwise a symbol containing "&" could inject extra
+  // query parameters into the request.
   function fetchNextDayOpen() {
     root.fetchIndex++
     if (root.fetchIndex >= root.symbols.length) return
     dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5", "--max-filesize", "16384",
-      "https://api.binance.com/api/v3/klines?symbol=" + root.symbols[root.fetchIndex] + "&interval=1d&limit=1"]
+      "https://api.binance.com/api/v3/klines?symbol=" + encodeURIComponent(root.symbols[root.fetchIndex]) + "&interval=1d&limit=1"]
     dayOpenFetch.running = true
   }
 
@@ -251,7 +269,7 @@ BarWidget {
     if (root.symbols.length === 0) return
     root.fetchIndex = 0
     dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5", "--max-filesize", "16384",
-      "https://api.binance.com/api/v3/klines?symbol=" + root.symbols[0] + "&interval=1d&limit=1"]
+      "https://api.binance.com/api/v3/klines?symbol=" + encodeURIComponent(root.symbols[0]) + "&interval=1d&limit=1"]
     dayOpenFetch.running = true
   }
 
