@@ -38,9 +38,26 @@ BarWidget {
   readonly property string timezone: root.setting("timezone", "GMT")
   readonly property int viewportWidth: root.setting("viewportWidth", 150)
   readonly property real scrollSpeedPxPerSec: root.setting("scrollSpeedPxPerSec", 90)
-  readonly property int dayOpenRefreshSec: root.setting("refreshIntervalSec", 5 * 60)
-  readonly property int reconnectBaseMs: root.setting("reconnectBaseMs", 2000)
-  readonly property int reconnectMaxMs: root.setting("reconnectMaxMs", 60000)
+
+  // These three feed Timer.interval (dayOpenTimer, reconnectTimer below):
+  // an unvalidated 0 or negative value (or a non-numeric one coercing to
+  // NaN, which Timer also treats as an effectively-zero/invalid interval)
+  // schedules near-continuous repeated triggers, driving continuous
+  // curl/websocat process and network churn in this long-lived shell.
+  // clampInt floors/ceils and rejects non-finite values so a malformed
+  // persisted setting can't produce a runaway timer.
+  function clampInt(value, fallback, min, max) {
+    var n = Number(value)
+    if (!isFinite(n)) return fallback
+    n = Math.round(n)
+    if (n < min) return min
+    if (n > max) return max
+    return n
+  }
+
+  readonly property int dayOpenRefreshSec: root.clampInt(root.setting("refreshIntervalSec", 5 * 60), 5 * 60, 30, 86400)
+  readonly property int reconnectBaseMs: root.clampInt(root.setting("reconnectBaseMs", 2000), 2000, 250, 60000)
+  readonly property int reconnectMaxMs: root.clampInt(root.setting("reconnectMaxMs", 60000), 60000, 1000, 300000)
 
   property var tickers: ({})
   property var dayOpens: ({})
