@@ -3,6 +3,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import "Symbols.js" as SymbolUtil
+import "BoundedFetch.js" as Net
 
 // Popup opened by clicking the marquee: search Binance's own symbol list
 // (fetched once from GET /api/v3/ticker/price, ~2500 symbols, ~150KB — no
@@ -141,13 +142,12 @@ Panel {
       root.bar.shell.updateEntryInline(root.moduleName, entry)
   }
 
-  // The full ticker/price list is ~150-160KB today; --max-filesize gives
-  // generous headroom while still bounding it, so curl aborts rather than
-  // buffer an oversized response if the endpoint were ever spoofed or
-  // compromised.
+  // The full ticker/price list is ~150-160KB today; Net.command hard-caps
+  // it at 2MB regardless of Content-Length/transfer encoding (see
+  // BoundedFetch.js) — generous headroom while still bounding it.
   Process {
     id: symbolsProc
-    command: ["curl", "-fsS", "--max-time", "10", "--max-filesize", "2097152", "https://api.binance.com/api/v3/ticker/price"]
+    command: Net.command("https://api.binance.com/api/v3/ticker/price", 2097152, 10)
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

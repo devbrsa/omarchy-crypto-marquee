@@ -3,6 +3,7 @@ import Quickshell.Io
 import qs.Commons
 import qs.Ui
 import "Symbols.js" as SymbolUtil
+import "BoundedFetch.js" as Net
 
 // Binance price ticker marquee. Live last-traded price comes from a
 // websocat-bridged WebSocket connection (combined @trade stream, piped
@@ -257,25 +258,27 @@ BarWidget {
     fetchNextDayOpen()
   }
 
-  // A single-candle kline response is a few hundred bytes; --max-filesize
-  // makes curl abort rather than buffer an oversized response if the
-  // endpoint were ever spoofed or compromised. symbols is user/config-
-  // controlled (hand-editable in shell.json), so it's URL-encoded before
+  // A single-candle kline response is a few hundred bytes; Net.command
+  // hard-caps the response at 16KB regardless of Content-Length/transfer
+  // encoding (see BoundedFetch.js). symbols is user/config-controlled
+  // (hand-editable in shell.json), so it's URL-encoded before
   // interpolation — otherwise a symbol containing "&" could inject extra
   // query parameters into the request.
   function fetchNextDayOpen() {
     root.fetchIndex++
     if (root.fetchIndex >= root.symbols.length) return
-    dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5", "--max-filesize", "16384",
-      "https://api.binance.com/api/v3/klines?symbol=" + encodeURIComponent(root.symbols[root.fetchIndex]) + "&interval=1d&limit=1"]
+    dayOpenFetch.command = Net.command(
+      "https://api.binance.com/api/v3/klines?symbol=" + encodeURIComponent(root.symbols[root.fetchIndex]) + "&interval=1d&limit=1",
+      16384, 5)
     dayOpenFetch.running = true
   }
 
   function startDayOpenFetchCycle() {
     if (root.symbols.length === 0) return
     root.fetchIndex = 0
-    dayOpenFetch.command = ["curl", "-fsS", "--max-time", "5", "--max-filesize", "16384",
-      "https://api.binance.com/api/v3/klines?symbol=" + encodeURIComponent(root.symbols[0]) + "&interval=1d&limit=1"]
+    dayOpenFetch.command = Net.command(
+      "https://api.binance.com/api/v3/klines?symbol=" + encodeURIComponent(root.symbols[0]) + "&interval=1d&limit=1",
+      16384, 5)
     dayOpenFetch.running = true
   }
 
